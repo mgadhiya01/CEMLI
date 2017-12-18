@@ -1,0 +1,70 @@
+#set -x
+
+TKE_MODULE=CEMLI123
+export TKE_MODULE
+
+#Date and Hour of the program
+start_date=`date '+%d%m%Y%H%M%S'`
+export start_date
+echo "Start Date = " $start_date
+
+APPS_LOGIN=$1
+export APPS_LOGIN
+
+LANGUAGE=$2
+export LANGUAGE
+
+# Log File Creation
+LOG=$0_$2_$start_date.log
+export LOG
+ret=`touch $LOG`
+if [ -n "$ret" ]
+then
+  echo "Problem of writing rights in the repertory"
+  exit 1
+fi
+
+# Repertory name for deliveries
+TKE_REPLIV=..
+export TKE_REPLIV
+
+
+#--------------------------------------------------------------------
+# Control of entered parameters APPS passwords and language
+#--------------------------------------------------------------------
+
+if [ $# -ne 2 ]
+then
+  echo 'Usage : ' $0 ' <apps/apps_passwd> <Language>'
+  exit 1
+fi
+
+ret=`sqlplus -s $APPS_LOGIN <<__END1__
+__END1__`
+
+if [ -n "$ret" ]
+then
+  echo Incorrect password for oracle APPS user \(1st parameter\)
+  exit 1
+fi
+
+clear > $LOG
+
+# ************************************************************************************
+# Copy installed programs and installation according to NLS
+# ************************************************************************************
+
+
+#
+# Copy Utilities NLS
+#
+cp -fv $TKE_REPLIV/reports/${LANGUAGE}/TKER_CEMLI123_INVTTMTX_RPT.rdf    $XBOL_TOP/reports/${LANGUAGE}           >> $LOG
+cp -fv $TKE_REPLIV/install/fndload/${LANGUAGE}/TKE_CEMLI123_CP.ldt       $XBOL_TOP/patch/115/import/${LANGUAGE}  >> $LOG
+
+#
+# Automatic Setup of programs, executables 
+#
+FNDLOAD $APPS_LOGIN 0 Y UPLOAD $FND_TOP/patch/115/import/afcpprog.lct $XBOL_TOP/patch/115/import/${LANGUAGE}/TKE_CEMLI123_CP.ldt          - CUSTOM_MODE=FORCE >> $LOG
+
+exit 0
+
